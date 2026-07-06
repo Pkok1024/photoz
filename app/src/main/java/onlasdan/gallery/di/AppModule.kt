@@ -127,6 +127,9 @@ object AppModule {
 		// encrypted v16 file before Room opens it.
 		sqlCipherMigrationHelper.migrateIfNecessary()
 
+		// Load SQLCipher native libraries before opening the database
+		net.sqlcipher.database.SQLiteDatabase.loadLibs(app)
+
 		val passphrase = sqlCipherKeyProvider.getOrCreatePassphrase()
 		val factory = SupportFactory(passphrase)
 
