@@ -107,13 +107,13 @@ class UnlockFragment : Fragment() {
 					if (securityWarning != null) {
 						androidx.compose.material3.AlertDialog(
 							onDismissRequest = { viewModel.securityWarning.value = null },
-							title = { androidx.compose.material3.Text("⚠ Security Warning") },
+							title = { androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(onlasdan.gallery.R.string.security_warning_title)) },
 							text = { androidx.compose.material3.Text(securityWarning!!) },
 							confirmButton = {
 								androidx.compose.material3.TextButton(
 									onClick = { viewModel.securityWarning.value = null },
 								) {
-									androidx.compose.material3.Text("I understand")
+									androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(onlasdan.gallery.R.string.security_warning_accept))
 								}
 							},
 						)
