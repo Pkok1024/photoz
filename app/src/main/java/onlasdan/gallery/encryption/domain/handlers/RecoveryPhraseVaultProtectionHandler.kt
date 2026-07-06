@@ -57,6 +57,26 @@ class RecoveryPhraseVaultProtectionHandler
 			requireNotNull(params.kdf)
 			requireNotNull(params.kdfIterations)
 
+			val ivBytes = Base64.decode(params.iv)
+			val (aesIv, argon2MemoryKB) =
+				when (params.kdf) {
+					Kdf.Argon2id -> {
+						require(ivBytes.size >= 4 + IV_SIZE) {
+							"Argon2id iv field too short: ${ivBytes.size} bytes (need ${4 + IV_SIZE})"
+						}
+						val memory =
+							((ivBytes[0].toInt() and 0xFF) shl 24) or
+								((ivBytes[1].toInt() and 0xFF) shl 16) or
+								((ivBytes[2].toInt() and 0xFF) shl 8) or
+								(ivBytes[3].toInt() and 0xFF)
+						val iv = ivBytes.copyOfRange(4, 4 + IV_SIZE)
+						iv to memory
+					}
+					Kdf.PBKDF2WithHmacSHA256 -> {
+						ivBytes to KeyGen.DEFAULT_ARGON2_MEMORY_KB
+					}
+				}
+
 			val kek =
 				keyGen.derivePasswordKeyEncryptionKey(
 					password = request.phrase.toMnemonicString(),
@@ -64,11 +84,12 @@ class RecoveryPhraseVaultProtectionHandler
 					kdf = params.kdf,
 					kdfIterations = params.kdfIterations,
 					keySize = params.keySize,
+					argon2MemoryKB = argon2MemoryKB,
 				)
 
 			val cipher =
 				Cipher.getInstance(params.algorithm.value).apply {
-					init(Cipher.DECRYPT_MODE, kek, IvParameterSpec(Base64.decode(params.iv)))
+					init(Cipher.DECRYPT_MODE, kek, IvParameterSpec(aesIv))
 				}
 
 			val vmkBytes = cipher.doFinal(protection.wrappedVMK)
@@ -81,14 +102,25 @@ class RecoveryPhraseVaultProtectionHandler
 
 			val salt = ByteArray(SALT_SIZE).also { SecureRandom().nextBytes(it) }
 			val iv = ByteArray(IV_SIZE).also { SecureRandom().nextBytes(it) }
-			val kdf = Kdf.PBKDF2WithHmacSHA256
+
+			// TODO #3 — Use Argon2id for new recovery phrase protections as well.
+			val kdf = Kdf.Argon2id
+			val kdfIterations = KeyGen.DEFAULT_ARGON2_ITERATIONS
+			val argon2MemoryKB = KeyGen.DEFAULT_ARGON2_MEMORY_KB
+
+			val ivWithMemory = ByteArray(4 + IV_SIZE)
+			ivWithMemory[0] = (argon2MemoryKB ushr 24).toByte()
+			ivWithMemory[1] = (argon2MemoryKB ushr 16).toByte()
+			ivWithMemory[2] = (argon2MemoryKB ushr 8).toByte()
+			ivWithMemory[3] = argon2MemoryKB.toByte()
+			System.arraycopy(iv, 0, ivWithMemory, 4, IV_SIZE)
 
 			val params =
 				VaultProtectionParams(
 					salt = Base64.encode(salt),
-					iv = Base64.encode(iv),
+					iv = Base64.encode(ivWithMemory),
 					kdf = kdf,
-					kdfIterations = KEK_ITERATIONS,
+					kdfIterations = kdfIterations,
 					algorithm = Algorithm.AesCbcPkcs7Padding,
 					keySize = KEK_SIZE,
 				)
@@ -98,8 +130,9 @@ class RecoveryPhraseVaultProtectionHandler
 					password = phrase.toMnemonicString(),
 					salt = salt,
 					kdf = kdf,
-					kdfIterations = KEK_ITERATIONS,
+					kdfIterations = kdfIterations,
 					keySize = KEK_SIZE,
+					argon2MemoryKB = argon2MemoryKB,
 				)
 
 			val cipher =

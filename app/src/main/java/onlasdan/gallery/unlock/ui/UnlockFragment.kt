@@ -82,6 +82,7 @@ class UnlockFragment : Fragment() {
 				AppTheme {
 					val unlockState by viewModel.unlockState.collectAsStateWithLifecycle()
 					val breakInWarning by viewModel.breakInWarning.collectAsStateWithLifecycle()
+					val securityWarning by viewModel.securityWarning.collectAsStateWithLifecycle()
 					var showBiometric by remember { mutableStateOf(false) }
 					var showForgotPassword by remember { mutableStateOf(false) }
 
@@ -97,6 +98,22 @@ class UnlockFragment : Fragment() {
 									onClick = { viewModel.breakInWarning.value = null },
 								) {
 									androidx.compose.material3.Text("Dismiss")
+								}
+							},
+						)
+					}
+
+					// TODO #9 — Security warning dialog (Root/Debugger).
+					if (securityWarning != null) {
+						androidx.compose.material3.AlertDialog(
+							onDismissRequest = { viewModel.securityWarning.value = null },
+							title = { androidx.compose.material3.Text("⚠ Security Warning") },
+							text = { androidx.compose.material3.Text(securityWarning!!) },
+							confirmButton = {
+								androidx.compose.material3.TextButton(
+									onClick = { viewModel.securityWarning.value = null },
+								) {
+									androidx.compose.material3.Text("I understand")
 								}
 							},
 						)

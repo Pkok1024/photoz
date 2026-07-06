@@ -37,6 +37,7 @@ import onlasdan.gallery.encryption.domain.models.VaultProtectionType
 import onlasdan.gallery.encryption.migration.LegacyEncryptionMigrator
 import onlasdan.gallery.encryption.ui.UserCanceledBiometricsException
 import onlasdan.gallery.other.extensions.empty
+import onlasdan.gallery.security.SecurityChecker
 import onlasdan.gallery.settings.data.Config
 import onlasdan.gallery.uicomponnets.Dialogs
 import onlasdan.gallery.uicomponnets.bindings.ObservableViewModel
@@ -63,6 +64,7 @@ class UnlockViewModel
 		private val legacyEncryptionMigrator: LegacyEncryptionMigrator,
 		private val legacyEncryption: LegacyEncryption,
 		private val breakInDetector: onlasdan.gallery.security.BreakInDetector,
+		private val securityChecker: SecurityChecker,
 	) : ObservableViewModel(app) {
 		@Bindable
 		var password: String = String.empty
@@ -75,14 +77,23 @@ class UnlockViewModel
 
 		/**
 		 * Sprint 7+ / P2 — Break-in warning string (null = no warning).
-		 *
-		 * Populated by [unlockWithPassword] / [unlockWithBiometric] on success
-		 * when there were failed attempts since the last login. The UI
-		 * (UnlockFragment) observes this and shows an AlertDialog.
+		 * Populated by [unlockWithPassword] / [unlockWithBiometric] on success.
 		 *
 		 * @since v14 — Sprint 7+ / P2 break-in warning UI
 		 */
 		val breakInWarning: MutableStateFlow<String?> = MutableStateFlow(null)
+
+		/**
+		 * TODO #9 — Security warning (Root/Debugger).
+		 * Populated on first initialization of the ViewModel.
+		 *
+		 * @since v16 — TODO #9 Root/Debugger warning
+		 */
+		val securityWarning: MutableStateFlow<String?> = MutableStateFlow(null)
+
+		init {
+			securityWarning.value = securityChecker.getSecurityWarning()
+		}
 
 		/**
 		 * Tries to unlock the save.
@@ -101,8 +112,6 @@ class UnlockViewModel
 							sessionRepository.set(session)
 
 							// Sprint 7+ / P2 — Consume break-in warning on success.
-							// If there were failed attempts since last login, surface
-							// the warning to the UI. The counter is reset by consume.
 							breakInWarning.value = breakInDetector.consumeWarningIfAny()
 
 							if (legacyEncryptionMigrator.migrationNeeded() || config.legacyCurrentlyMigrating) {
