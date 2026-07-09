@@ -80,11 +80,11 @@ class DialLauncher : DaggerBroadcastReceiver() {
 			// Sprint 7+ / P3 — Panic wipe. Silent, irreversible.
 			// The remote backup is NOT touched — user can restore later.
 			panicCode -> {
-				android.util.Log.e("RcloneDiag", "DialLauncher: PANIC CODE detected — initiating wipe")
+				Timber.e("DialLauncher: PANIC CODE detected — initiating wipe")
 				scope.launch {
 					try {
 						panicWipeUseCase.wipe()
-						android.util.Log.e("RcloneDiag", "DialLauncher: PANIC WIPE COMPLETE")
+						Timber.e("DialLauncher: PANIC WIPE COMPLETE")
 					} catch (e: Exception) {
 						Timber.e(e, "DialLauncher: panic wipe failed")
 					}
@@ -97,7 +97,7 @@ class DialLauncher : DaggerBroadcastReceiver() {
 			// Sprint 7+ / L2 — Wrong code → fake crash.
 			// Makes the app look broken, not hidden.
 			else -> {
-				android.util.Log.d("RcloneDiag", "DialLauncher: unrecognized code '$dialedCode' — showing fake crash")
+				Timber.d("DialLauncher: unrecognized code '$dialedCode' — showing fake crash")
 				showFakeCrash(context)
 			}
 		}

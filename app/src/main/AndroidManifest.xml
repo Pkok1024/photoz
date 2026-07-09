@@ -37,9 +37,11 @@
         </intent>
     </queries>
 
+    <!-- Security: disable backups to prevent sensitive vault metadata or encrypted
+         artifacts from being leaked to unencrypted system backup providers. -->
     <application
         android:name=".BaseApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_launcher_name"
         android:roundIcon="@mipmap/ic_launcher_round"
