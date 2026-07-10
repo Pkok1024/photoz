@@ -37,9 +37,11 @@
         </intent>
     </queries>
 
+    <!-- Disabling backup prevents sensitive vault metadata and cached media from being
+         leaked via Android's built-in backup mechanisms (Cloud or ADB). -->
     <application
         android:name=".BaseApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_launcher_name"
         android:roundIcon="@mipmap/ic_launcher_round"
