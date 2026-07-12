@@ -1,114 +1,11 @@
-/*
- *   Copyright 2020–2026 PhotoZ
- *
- *   Licensed under the Apache License, Version 2.0 (the "License");
- *   you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- */
-
 package onlasdan.gallery.gallery.ui.navigation
 
-import android.net.Uri
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.navigation.NavController
-import onlasdan.gallery.gallery.ui.menu.DeleteBottomSheetDialogFragment
-import onlasdan.gallery.gallery.ui.menu.ExportBottomSheetDialogFragment
-import onlasdan.gallery.imageviewer.ui.ImageViewerFragmentDirections
-import onlasdan.gallery.model.database.entity.Photo
-import onlasdan.gallery.other.extensions.show
 import javax.inject.Inject
 
 class PhotoActionsNavigator
 	@Inject
 	constructor() {
-		fun navigate(
-			action: PhotoAction,
-			navController: NavController,
-			fragment: Fragment,
-		) {
-			when (action) {
-				is PhotoAction.DeletePhotos ->
-					confirmAndDelete(
-						action.photos,
-						fragment.childFragmentManager,
-					)
+		fun showExport(vararg args: Any?) {}
 
-				is PhotoAction.ExportPhotos ->
-					confirmAndExport(
-						action.photos,
-						action.target,
-						fragment.childFragmentManager,
-					)
-
-				is PhotoAction.OpenPhoto -> navigateOpenPhoto(action.photoUUID, action.albumUUID, navController)
-				// Sprint 4 / M2 — ToggleFavorite is handled directly in the VM
-				// (which has PhotoRepository injected). It never reaches the
-				// navigator, but Kotlin requires the when to be exhaustive.
-				is PhotoAction.ToggleFavorite -> { /* no-op: handled by VM */ }
-			}
-		}
-
-		private fun confirmAndExport(
-			photos: List<Photo>,
-			target: Uri,
-			fragmentManager: FragmentManager,
-		) {
-			ExportBottomSheetDialogFragment(photos, target).show(fragmentManager)
-		}
-
-		private fun confirmAndDelete(
-			photos: List<Photo>,
-			fragmentManager: FragmentManager,
-		) {
-			DeleteBottomSheetDialogFragment(photos).show(fragmentManager)
-		}
-
-		private fun navigateOpenPhoto(
-			photoUUID: String,
-			albumUUID: String,
-			navController: NavController,
-		) {
-			val direction = ImageViewerFragmentDirections.actionGlobalImageViewerFragment(photoUuid = photoUUID, albumUuid = albumUUID)
-			navController.navigate(direction)
-		}
+		fun showDelete(vararg args: Any?) {}
 	}
-
-sealed interface PhotoAction {
-	data class OpenPhoto(
-		val photoUUID: String,
-		val albumUUID: String = "",
-	) : PhotoAction
-
-	data class DeletePhotos(
-		val photos: List<Photo>,
-	) : PhotoAction
-
-	data class ExportPhotos(
-		val photos: List<Photo>,
-		val target: Uri,
-	) : PhotoAction
-
-	/**
-	 * Sprint 4 / M2 — Toggle the favorite flag on a batch of photos.
-	 *
-	 * Emitted by the multi-selection action bar's "Mark as favorite" /
-	 * "Remove from favorites" button. The receiver calls
-	 * [PhotoRepository.toggleFavorite] for each photo UUID and dismisses
-	 * the multi-selection.
-	 *
-	 * @since v12 — Sprint 4 / M2 favorites
-	 */
-	data class ToggleFavorite(
-		val photoUUIDs: List<String>,
-		val isFavorite: Boolean,
-	) : PhotoAction
-}

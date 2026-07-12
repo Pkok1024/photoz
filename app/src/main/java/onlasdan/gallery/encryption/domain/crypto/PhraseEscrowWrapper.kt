@@ -26,7 +26,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.io.encoding.Base64
 
-private const val PHRASE_KEK_ITERATIONS = 100_000
 private const val PHRASE_KEK_SIZE = 256
 
 /**
@@ -58,14 +57,16 @@ class PhraseEscrowWrapper
 			val kdfIterations: Int,
 			val algorithm: Algorithm,
 			val keySize: Int,
+			val argon2MemoryKB: Int? = null,
 		) {
 			fun toJson(): String {
 				val wpB64 = Base64.encode(wrappedPhrase)
 				val saltB64 = Base64.encode(salt)
 				val ivB64 = Base64.encode(iv)
+				val argon2Part = if (argon2MemoryKB != null) ""","argon2MemoryKB":$argon2MemoryKB""" else ""
 				return """{"wrappedPhrase":"$wpB64","salt":"$saltB64","iv":"$ivB64",""" +
 					""""kdf":"${kdf.value}","kdfIterations":$kdfIterations,""" +
-					""""algorithm":"${algorithm.value}","keySize":$keySize}"""
+					""""algorithm":"${algorithm.value}","keySize":$keySize$argon2Part}"""
 			}
 
 			companion object {
@@ -108,6 +109,12 @@ class PhraseEscrowWrapper
 								?.groupValues
 								?.get(1)
 								?.toIntOrNull() ?: return null
+						val memory =
+							Regex("\"argon2MemoryKB\"\\s*:\\s*(\\d+)")
+								.find(json)
+								?.groupValues
+								?.get(1)
+								?.toIntOrNull()
 						WrappedPhrase(
 							wrappedPhrase = Base64.decode(wp),
 							salt = Base64.decode(salt),
@@ -116,6 +123,7 @@ class PhraseEscrowWrapper
 							kdfIterations = kdfIter,
 							algorithm = Algorithm.entries.first { it.value == algStr },
 							keySize = keySize,
+							argon2MemoryKB = memory,
 						)
 					} catch (e: Exception) {
 						null
@@ -130,13 +138,19 @@ class PhraseEscrowWrapper
 		): WrappedPhrase {
 			val salt = ByteArray(SALT_SIZE).also { SecureRandom().nextBytes(it) }
 			val iv = ByteArray(IV_SIZE).also { SecureRandom().nextBytes(it) }
+			// TODO #3 — New escrows use Argon2id (memory-hard KDF, 2025 standard).
+			val kdf = Kdf.Argon2id
+			val iterations = KeyGen.DEFAULT_ARGON2_ITERATIONS
+			val memory = KeyGen.DEFAULT_ARGON2_MEMORY_KB
+
 			val kek =
 				keyGen.derivePasswordKeyEncryptionKey(
 					password = password,
 					salt = salt,
-					kdf = Kdf.PBKDF2WithHmacSHA256,
-					kdfIterations = PHRASE_KEK_ITERATIONS,
+					kdf = kdf,
+					kdfIterations = iterations,
 					keySize = PHRASE_KEK_SIZE,
+					argon2MemoryKB = memory,
 				)
 			val cipher =
 				Cipher.getInstance(Algorithm.AesCbcPkcs7Padding.value).apply {
@@ -147,10 +161,11 @@ class PhraseEscrowWrapper
 				wrappedPhrase = wrapped,
 				salt = salt,
 				iv = iv,
-				kdf = Kdf.PBKDF2WithHmacSHA256,
-				kdfIterations = PHRASE_KEK_ITERATIONS,
+				kdf = kdf,
+				kdfIterations = iterations,
 				algorithm = Algorithm.AesCbcPkcs7Padding,
 				keySize = PHRASE_KEK_SIZE,
+				argon2MemoryKB = memory,
 			)
 		}
 
@@ -170,6 +185,7 @@ class PhraseEscrowWrapper
 						kdf = wrapped.kdf,
 						kdfIterations = wrapped.kdfIterations,
 						keySize = wrapped.keySize,
+						argon2MemoryKB = wrapped.argon2MemoryKB ?: KeyGen.DEFAULT_ARGON2_MEMORY_KB,
 					)
 				val cipher =
 					Cipher.getInstance(wrapped.algorithm.value).apply {

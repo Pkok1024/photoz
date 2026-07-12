@@ -35,10 +35,6 @@ import javax.inject.Inject
 
 /**
  * ViewModel to create a backup.
- * Backups photos and meta data to zip file.
- *
- * @since 1.0.0
- * @author PhotoZ
  */
 @HiltViewModel
 class BackupViewModel
@@ -52,7 +48,6 @@ class BackupViewModel
 		private val vaultProtectionRepository: VaultProtectionRepository,
 	) : BaseProcessViewModel<Photo>(app) {
 		lateinit var uri: Uri
-
 		lateinit var strategyName: BackupStrategy.Name
 
 		private val strategy: BackupStrategy by lazy {
@@ -66,13 +61,12 @@ class BackupViewModel
 
 		override suspend fun preProcess() {
 			items = photoRepository.findAllPhotosByImportDateDesc()
-			elementsToProcess = items.size
+			elementsToProcess.value = items.size
 			zipOutputStream = io.zip.openZipOutput(uri)
 
-			// Should not happen because of unlock before create backup
 			val protection = vaultProtectionRepository.getProtection(VaultProtectionType.Password)
 			if (protection == null) {
-				failuresOccurred = true
+				failuresOccurred()
 				cancel()
 				return
 			}
@@ -86,7 +80,7 @@ class BackupViewModel
 				.writePhotoToBackup(item, zipOutputStream)
 				.onFailure {
 					Timber.e(it, "Error writing photo to backup")
-					failuresOccurred = true
+					failuresOccurred()
 				}
 		}
 
@@ -96,7 +90,7 @@ class BackupViewModel
 					.createMetaFileInBackup(zipOutputStream)
 					.onFailure {
 						Timber.e(it, "Error writing meta file to backup")
-						failuresOccurred = true
+						failuresOccurred()
 					}
 			}
 

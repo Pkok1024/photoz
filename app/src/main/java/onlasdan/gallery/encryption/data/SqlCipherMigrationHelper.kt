@@ -26,43 +26,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * One-time migration of `photok.db` from plaintext (v15) to SQLCipher-
- * encrypted (v16).
- *
- * ## Migration approach: `sqlcipher_export()`
- *
- * The standard SQLCipher plaintext → encrypted migration uses the
- * `sqlcipher_export()` SQL function:
- *
- *  1. Open the plaintext DB with an empty passphrase (SQLCipher accepts
- *     `""` to mean "no encryption").
- *  2. ATTACH a new encrypted DB file with the desired key:
- *     `ATTACH DATABASE 'photok.db.new' AS new KEY '<passphrase>'`
- *  3. `SELECT sqlcipher_export('new')` — copies the entire schema AND
- *     all data from `main` (plaintext) to `new` (encrypted).
- *  4. DETACH `new`.
- *  5. Close the plaintext connection.
- *  6. Replace `photok.db` with `photok.db.new`.
- *
- * After this, Room can open `photok.db` normally as a SQLCipher-
- * encrypted DB. The Room Migration v15→v16 callback fires (Room sees
- * user_version=15 in the now-encrypted file, decides it needs to bump
- * to 16) — the migration is a no-op for table data (already copied),
- * but Room advances the user_version.
- *
- * ## When this runs
- *
- * Called from [onlasdan.gallery.di.AppModule.providePhotoZDatabase]
- * BEFORE `Room.databaseBuilder(...).build()`. The migration must happen
- * before Room tries to open the file with a SQLCipher key (which would
- * fail on a plaintext file).
- *
- * ## Failure handling
- *
- * If any step fails, the original `photok.db` is left untouched and the
- * migration is NOT marked done. The next app start retries. The app
- * will fail to open the DB (SQLCipher key mismatch on plaintext file) —
- * loud failure is preferred over silent fallback to plaintext.
+ * Helper for performing the one-time migration from plaintext Room DB (v15)
+ * to SQLCipher-encrypted DB (v16).
  *
  * @since v16 — Sprint 3 / TODO #6 SQLCipher
  */
@@ -73,25 +38,15 @@ class SqlCipherMigrationHelper
 		@ApplicationContext private val app: Context,
 		private val config: Config,
 		private val sqlCipherKeyProvider: SqlCipherKeyProvider,
-		/**
-		 * Plaintext bootstrap DB — receives the `vault_protection` rows
-		 * copied out of the old plaintext `photok.db` during migration.
-		 *
-		 * Injected (not constructed locally) so the same Singleton instance
-		 * is used by [VaultService.unlock] at runtime — the rows we write
-		 * here are immediately visible to the unlock flow.
-		 *
-		 * @since v16 — Sprint 3 / TODO #6 SQLCipher
-		 */
 		private val bootstrapDatabase: BootstrapDatabase,
 	) {
 		/**
-		 * Run the migration if necessary. Idempotent — safe to call on every
-		 * app start.
+		 * Check if migration is needed and run it. Called from
+		 * [onlasdan.gallery.di.AppModule.providePhotoZDatabase] BEFORE Room
+		 * opens the DB.
 		 *
-		 * @return true if the DB is ready to be opened as SQLCipher-encrypted
-		 *   (either migration succeeded OR was already done OR fresh install).
-		 *   false if the migration failed (caller should log + flag for user).
+		 * @return true if migration is not needed or succeeded; false if
+		 *   migration failed (caller should log + flag for user).
 		 */
 		fun migrateIfNecessary(): Boolean {
 			if (config.sqlCipherMigrationDone) {
@@ -172,6 +127,9 @@ class SqlCipherMigrationHelper
 				// Step 1: open the plaintext DB with empty passphrase.
 				// SQLCipher treats `""` as "no encryption" — this allows
 				// reading/writing a standard SQLite file via the SQLCipher API.
+				// Load SQLCipher native library first.
+				net.sqlcipher.database.SQLiteDatabase.loadLibs(app)
+
 				plaintextDb =
 					net.sqlcipher.database.SQLiteDatabase.openOrCreateDatabase(
 						dbFile.absolutePath,

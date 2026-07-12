@@ -23,7 +23,7 @@ package onlasdan.gallery.uicomponnets.base.processdialogs
  * @author PhotoZ
  */
 enum class ProcessState {
-	INITIALIZE,
+	INITIALIZING,
 	PROCESSING,
 	FINISHED,
 	ABORTED,

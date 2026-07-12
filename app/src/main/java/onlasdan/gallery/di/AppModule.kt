@@ -28,7 +28,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import net.sqlcipher.database.SupportFactory
 import onlasdan.gallery.encryption.data.BootstrapDatabase
+import onlasdan.gallery.encryption.data.SqlCipherKeyProvider
+import onlasdan.gallery.encryption.data.SqlCipherMigrationHelper
 import onlasdan.gallery.encryption.data.VaultProtectionDao
 import onlasdan.gallery.gallery.ui.importing.SharedUrisStore
 import onlasdan.gallery.model.database.DATABASE_NAME
@@ -116,15 +119,25 @@ object AppModule {
 	@Singleton
 	fun providePhotoZDatabase(
 		@ApplicationContext app: Context,
+		sqlCipherKeyProvider: SqlCipherKeyProvider,
+		sqlCipherMigrationHelper: SqlCipherMigrationHelper,
 	): PhotoZDatabase {
-		// DEBUG: SQLCipher disabled for crash isolation.
-		// Using plain Room (no encryption) to test if SQLCipher native lib
-		// is causing the startup crash.
-		return Room.databaseBuilder(
-			app,
-			PhotoZDatabase::class.java,
-			DATABASE_NAME,
-		).addMigrations(MIGRATION_15_16).build()
+		// Sprint 3 / TODO #6 — SQLCipher activation.
+		// migrateIfNecessary() handles the one-time copy from plaintext to
+		// encrypted v16 file before Room opens it.
+		sqlCipherMigrationHelper.migrateIfNecessary()
+
+		val passphrase = sqlCipherKeyProvider.getOrCreatePassphrase()
+		val factory = SupportFactory(passphrase)
+
+		return Room
+			.databaseBuilder(
+				app,
+				PhotoZDatabase::class.java,
+				DATABASE_NAME,
+			).openHelperFactory(factory)
+			.addMigrations(MIGRATION_15_16)
+			.build()
 	}
 
 	@Provides

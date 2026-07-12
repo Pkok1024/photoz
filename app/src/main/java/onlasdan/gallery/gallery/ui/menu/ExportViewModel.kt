@@ -26,9 +26,6 @@ import javax.inject.Inject
 
 /**
  * ViewModel for exporting multiple photos.
- *
- * @since 1.0.0
- * @author PhotoZ
  */
 @HiltViewModel
 class ExportViewModel
@@ -42,7 +39,7 @@ class ExportViewModel
 		override suspend fun processItem(item: Photo) {
 			val result = photoRepository.exportPhoto(item, target)
 			if (!result) {
-				failuresOccurred = true
+				failuresOccurred()
 			}
 		}
 	}

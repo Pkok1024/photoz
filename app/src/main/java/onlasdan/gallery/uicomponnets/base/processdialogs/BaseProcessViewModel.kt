@@ -17,78 +17,33 @@
 package onlasdan.gallery.uicomponnets.base.processdialogs
 
 import android.app.Application
-import androidx.databinding.Bindable
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import onlasdan.gallery.BR
-import onlasdan.gallery.uicomponnets.bindings.ObservableViewModel
 
 /**
  * Abstract base for all processing view models.
- * Holds live data for [ProcessState].
- * Provides abstract functions called by the ui.
+ * Replaced DataBinding with Flow.
  *
  * @param T Type of elements to be processed
  *
- * @sine 1.0.0
+ * @since 1.0.0
  * @author PhotoZ
  */
 abstract class BaseProcessViewModel<T>(
 	app: Application,
-) : ObservableViewModel(app) {
-	/**
-	 * List of [T].
-	 * Gets set automatically by fragment.
-	 * Gets processed in [processLoop].
-	 */
+) : AndroidViewModel(app) {
 	lateinit var items: List<T>
 
-	/**
-	 * The processing state should be checked every time in [processLoop].
-	 */
-	@get:Bindable
-	var processState: ProcessState = ProcessState.INITIALIZE
-		set(value) {
-			field = value
-			notifyChange(BR.processState, value)
-		}
+	val processState = MutableStateFlow(ProcessState.INITIALIZING)
+	val progressPercent = MutableStateFlow(0)
+	val current = MutableStateFlow(0)
+	val elementsToProcess = MutableStateFlow(0)
 
-	@get:Bindable
-	var progressPercent: Int = 0
-		set(value) {
-			field = value
-			notifyChange(BR.progressPercent, value)
-		}
-
-	@get:Bindable
-	var current: Int = 0
-		set(value) {
-			field = value
-			notifyChange(BR.current, value)
-		}
-
-	/**
-	 * The number of elements to get processed.
-	 * Gets set automatically.
-	 */
-	@get:Bindable
-	var elementsToProcess = 0
-		set(value) {
-			field = value
-			notifyChange(BR.elementsToProcess, value)
-		}
-
-	/**
-	 * Indicates if failures occurred.
-	 * Gets evaluated by base DialogFragment to show warning. Should be set in [processItem] if an elements fails.
-	 */
 	var failuresOccurred = false
 
-	/**
-	 * Runs [preProcess], [processLoop] and [postProcess].
-	 * launched in [viewModelScope].
-	 */
 	fun runProcessing() =
 		viewModelScope.launch(Dispatchers.IO) {
 			preProcess()
@@ -96,22 +51,14 @@ abstract class BaseProcessViewModel<T>(
 			postProcess()
 		}
 
-	/**
-	 * Gets executed before [processLoop].
-	 */
 	open suspend fun preProcess() {
-		processState = ProcessState.PROCESSING
+		processState.value = ProcessState.PROCESSING
 		updateProgress()
 	}
 
-	/**
-	 * Processing loop.
-	 * Calls [processItem].
-	 * Handles: Aborting and Updating progress.
-	 */
 	private suspend fun processLoop() {
 		for (item in items) {
-			if (processState == ProcessState.ABORTED) {
+			if (processState.value == ProcessState.ABORTED) {
 				return
 			}
 
@@ -120,47 +67,31 @@ abstract class BaseProcessViewModel<T>(
 		}
 	}
 
-	/**
-	 * Template method. Gets called by [processLoop].
-	 * Should implement the processing of one item.
-	 */
 	abstract suspend fun processItem(item: T)
 
-	/**
-	 * Get executed after [processLoop].
-	 */
 	open suspend fun postProcess() {
-		if (processState != ProcessState.ABORTED) {
-			processState = ProcessState.FINISHED
+		if (processState.value != ProcessState.ABORTED) {
+			processState.value = ProcessState.FINISHED
 		}
 	}
 
-	/**
-	 * Updates the state to [ProcessState.ABORTED].
-	 */
 	open fun cancel() {
-		processState = ProcessState.ABORTED
+		processState.value = ProcessState.ABORTED
 	}
 
-	/**
-	 * Update the progress.
-	 */
 	private fun itemProcessed() {
-		current++
+		current.value++
 		updateProgress()
 	}
 
 	private fun updateProgress() {
-		if (elementsToProcess == 0) {
+		if (elementsToProcess.value == 0) {
 			return
 		}
 
-		progressPercent = (current * 100) / elementsToProcess
+		progressPercent.value = (current.value * 100) / elementsToProcess.value
 	}
 
-	/**
-	 * Sets [failuresOccurred] to true
-	 */
 	fun failuresOccurred() {
 		failuresOccurred = true
 	}
