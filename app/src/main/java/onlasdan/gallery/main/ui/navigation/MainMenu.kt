@@ -18,11 +18,11 @@ package onlasdan.gallery.main.ui.navigation
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,32 +31,32 @@ import onlasdan.gallery.ui.theme.AppTheme
 
 @Composable
 fun MainMenu(
-	uiState: MainMenuUiState,
-	onNavigationItemClicked: (Int) -> Unit,
+	currentRoute: String?,
+	onNavigationItemClicked: (String) -> Unit,
 ) {
 	NavigationBar(
-		containerColor = colorResource(R.color.background),
+		containerColor = MaterialTheme.colorScheme.surface,
 	) {
 		MainNavItem(
-			fragmentsId = R.id.galleryFragment,
-			currentSelectedFragmentId = uiState.currentFragmentId,
+			route = Routes.Gallery,
+			currentRoute = currentRoute,
 			iconRes = R.drawable.ic_image,
 			label = stringResource(R.string.gallery_all_photos_label),
 			onNavigationItemClicked = onNavigationItemClicked,
 		)
 
 		MainNavItem(
-			fragmentsId = R.id.albumsFragment,
-			additionalFragmentsId = listOf(R.id.albumDetailFragment),
-			currentSelectedFragmentId = uiState.currentFragmentId,
+			route = Routes.Albums,
+			additionalRoutes = listOf(Routes.AlbumDetail),
+			currentRoute = currentRoute,
 			iconRes = R.drawable.ic_folder,
 			label = stringResource(R.string.gallery_albums_label),
 			onNavigationItemClicked = onNavigationItemClicked,
 		)
 
 		MainNavItem(
-			fragmentsId = R.id.settingsFragment,
-			currentSelectedFragmentId = uiState.currentFragmentId,
+			route = Routes.Settings,
+			currentRoute = currentRoute,
 			iconRes = R.drawable.ic_settings,
 			label = stringResource(R.string.menu_main_settings),
 			onNavigationItemClicked = onNavigationItemClicked,
@@ -69,7 +69,7 @@ fun MainMenu(
 private fun MainMenuPreview() {
 	AppTheme {
 		MainMenu(
-			uiState = MainMenuUiState(R.id.galleryFragment),
+			currentRoute = Routes.Gallery,
 			onNavigationItemClicked = {},
 		)
 	}
@@ -77,20 +77,21 @@ private fun MainMenuPreview() {
 
 @Composable
 private fun RowScope.MainNavItem(
-	fragmentsId: Int,
-	currentSelectedFragmentId: Int,
+	route: String,
+	currentRoute: String?,
 	iconRes: Int,
 	label: String,
-	onNavigationItemClicked: (Int) -> Unit,
-	additionalFragmentsId: List<Int> = emptyList(),
+	onNavigationItemClicked: (String) -> Unit,
+	additionalRoutes: List<String> = emptyList(),
 ) {
+	val selected = currentRoute == route ||
+		additionalRoutes.any {
+			currentRoute?.startsWith(it.substringBefore("/{")) == true
+		}
+
 	NavigationBarItem(
-		selected =
-			currentSelectedFragmentId == fragmentsId ||
-				additionalFragmentsId.contains(
-					currentSelectedFragmentId,
-				),
-		onClick = { onNavigationItemClicked(fragmentsId) },
+		selected = selected,
+		onClick = { onNavigationItemClicked(route) },
 		icon = {
 			Icon(painter = painterResource(iconRes), contentDescription = label)
 		},

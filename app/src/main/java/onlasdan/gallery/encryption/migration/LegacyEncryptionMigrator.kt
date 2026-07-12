@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import onlasdan.gallery.databinding.BindingConverters
 import onlasdan.gallery.encryption.domain.crypto.LegacyGcmCryptoEngine
 import onlasdan.gallery.encryption.domain.models.LegacySession
 import onlasdan.gallery.io.IO
@@ -215,7 +214,6 @@ class LegacyEncryptionMigrator
 			tmpName: String,
 		): String {
 			val legacyFile = app.openFileInput(legacyFileName)
-			val size = BindingConverters.formatByteSizeConverter(legacyFile.available().toLong())
 
 			val filesList = app.fileList()
 			val numLegacyFiles = filesList.count { it.contains(LEGACY_PHOTOK_FILE_EXTENSION) }
@@ -225,7 +223,7 @@ class LegacyEncryptionMigrator
 			return """
 				Migration Error.
 				 
-				File Size: $size
+				File Size: unknown
 				File Name: $legacyFileName
 				Temp Name: $tmpName
 				

@@ -1,4 +1,4 @@
-package onlasdan.gallery.gallery.albums.ui.compose
+package onlasdan.gallery.appstart.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,8 +8,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 @Composable
-fun AlbumsScreen(vararg args: Any?) {
+fun InitialScreen(vararg args: Any?) {
 	Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-		Text("AlbumsScreen Placeholder")
+		Text("InitialScreen Placeholder")
 	}
 }

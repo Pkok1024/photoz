@@ -4,7 +4,6 @@ plugins {
 	id("com.jaredsburrows.license")
 	// Sprint 7: AGP 9.1.0 with builtInKotlin=false (kapt needed for DataBinding)
 	kotlin("android")
-	kotlin("kapt")
 	kotlin("plugin.serialization")
 	id("org.jetbrains.kotlin.plugin.compose") version "2.4.0"
 
@@ -247,7 +246,6 @@ dependencies {
 
 	// Navigation Components
 	// Bumped 2.9.7 → 2.9.8 (Batch 3 — safe dep bumps from dependabot branch).
-	implementation("androidx.navigation:navigation-fragment-ktx:2.9.8")
 	implementation("androidx.navigation:navigation-ui-ktx:2.9.8")
 
 	// Timber Logging

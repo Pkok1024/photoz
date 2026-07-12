@@ -25,9 +25,6 @@ import javax.inject.Inject
 
 /**
  * ViewModel for deleting multiple photos.
- *
- * @since 1.0.0
- * @author PhotoZ
  */
 @HiltViewModel
 class DeleteViewModel
@@ -38,13 +35,13 @@ class DeleteViewModel
 	) : BaseProcessViewModel<Photo>(app) {
 		override suspend fun processItem(item: Photo) {
 			if (item.uuid.isEmpty()) {
-				failuresOccurred = true
+				failuresOccurred()
 				return
 			}
 
 			val success = photoRepository.safeDeletePhoto(item)
 			if (!success) {
-				failuresOccurred = true
+				failuresOccurred()
 			}
 		}
 	}

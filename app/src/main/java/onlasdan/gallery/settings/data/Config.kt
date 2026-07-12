@@ -42,7 +42,7 @@ class Config(
 ) {
 	private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
-	private val preferences: SharedPreferences = context.getSharedPreferences(FILE_NAME, MODE)
+	val preferences: SharedPreferences = context.getSharedPreferences(FILE_NAME, MODE)
 
 	val values: Map<String, *>
 		get() = preferences.all
