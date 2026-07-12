@@ -37,9 +37,24 @@
         </intent>
     </queries>
 
+    <!-- ─── WorkManager on-demand initialization ─────────────────────────── -->
+    <!-- BaseApplication implements Configuration.Provider and supplies a custom
+         Configuration that wires in HiltWorkerFactory (needed for @HiltWorker
+         classes like PhotoSyncWorker that use @AssistedInject — no no-arg ctor).
+
+         For Configuration.Provider to be consulted, the DEFAULT WorkManagerInitializer
+         (registered via androidx.startup) MUST be removed. Without this removal,
+         androidx.startup initializes WorkManager at app startup with the DEFAULT
+         Configuration (default WorkerFactory = reflection + no-arg ctor only),
+         BaseApplication's Configuration.Provider is NEVER consulted, and
+         @HiltWorker classes fail to instantiate with ENQUEUED→FAILED, runAttemptCount=0,
+         no doWork() log lines (the failure happens BEFORE doWork is reached).
+
+         This was the root cause of the "upload worker enqueued but never runs" bug.
+         See: https://developer.android.com/guide/background/persistent/configuration/custom-configuration -->
     <application
         android:name=".BaseApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_launcher_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -47,21 +62,6 @@
         android:theme="@style/AppTheme"
         android:enableOnBackInvokedCallback="true">
 
-        <!-- ─── WorkManager on-demand initialization ─────────────────────────── -->
-        <!-- BaseApplication implements Configuration.Provider and supplies a custom
-             Configuration that wires in HiltWorkerFactory (needed for @HiltWorker
-             classes like PhotoSyncWorker that use @AssistedInject — no no-arg ctor).
-
-             For Configuration.Provider to be consulted, the DEFAULT WorkManagerInitializer
-             (registered via androidx.startup) MUST be removed. Without this removal,
-             androidx.startup initializes WorkManager at app startup with the DEFAULT
-             Configuration (default WorkerFactory = reflection + no-arg ctor only),
-             BaseApplication's Configuration.Provider is NEVER consulted, and
-             @HiltWorker classes fail to instantiate with ENQUEUED→FAILED, runAttemptCount=0,
-             no doWork() log lines (the failure happens BEFORE doWork is reached).
-
-             This was the root cause of the "upload worker enqueued but never runs" bug.
-             See: https://developer.android.com/guide/background/persistent/configuration/custom-configuration -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
